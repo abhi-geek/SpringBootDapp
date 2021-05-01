@@ -39,10 +39,10 @@ public class PrimeNftController {
     private final static String PRIVATE_KEY_ACCT2 = "ed0917a6bf4479588b78a8bb4d8b7bdf903d0d0c5abdfd3cca9462c93eec1293";
     private final static String PRIVATE_KEY_ACCT1 = "e18a11c1fe3b881e239b1fe2705d20382ee00db2b1c4ecc51f109297d4b74915";
     private final static String PRIVATE_KEY_ACCT3 = "6a854713ef796bea68cdd4642bd325291caebbba0ade8f5e9c7d9aaaff755afd";
-    private final static String CONTRACT_ADDRESS = "0xb44c5F1C9D32d19513E8EBBfE994f1f0aD7255E6";
+    private final static String CONTRACT_ADDRESS = "0xdfDE039FAcFD345E3dc83CFD2556AE1da66F399E";
 
-    private final static BigInteger GAS_LIMIT = BigInteger.valueOf(6721975L);
-    private final static BigInteger GAS_PRICE = BigInteger.valueOf(20000000000L);
+    private final static BigInteger GAS_LIMIT = BigInteger.valueOf(6721L);
+    private final static BigInteger GAS_PRICE = BigInteger.valueOf(200000L);
 
     private final static String Acct1 = "0xb6ec67734946D44fb019BFD22A3D62503F4f6769";
     private final static String Acct2 = "0x14104C4EbD9973B9cF53274327ca0D3822601C3D";
@@ -52,6 +52,8 @@ public class PrimeNftController {
             entry(2, "0x14104C4EbD9973B9cF53274327ca0D3822601C3D"),
             entry(3, "0xc76beE05500ce92B49a4B9caaaAD31ca790D6100")
     );
+
+    private  Web3j web3j;
 
     @GetMapping("/walletBalance")
     public String walletBalance(@RequestParam("AccountNumber") Integer account){
@@ -170,12 +172,41 @@ public class PrimeNftController {
     }
 
     private Web3j getWeb3jConnection() throws IOException {
-        Web3j web3j = Web3j.build(new HttpService("http://localhost:7545"));
+        if(Objects.nonNull(web3j)) return web3j;
+        web3j = Web3j.build(new HttpService("http://localhost:7545"));
 
         logger.info("Connected to Ethereum client version: "
                 + web3j.web3ClientVersion().send().getWeb3ClientVersion());
         return web3j;
     }
 
+    @GetMapping("/factorial")
+    public BigInteger primeNft(@RequestParam("number") BigInteger token) {
+        BigInteger res = null;
+        try {
+            // We start by creating a new web3j instance to connect to remote nodes on the network.
+            Web3j web3j = getWeb3jConnection();
+
+            TransactionManager transactionManager = new RawTransactionManager(
+                    web3j,
+                    getCredentialsFromPrivateKey(2)
+            );
+
+            logger.info("Credentials loaded");
+            ContractGasProvider contractGasProvider = new StaticGasProvider(GAS_PRICE,GAS_LIMIT);
+            PrimeNumber contract = PrimeNumber.load(
+                    CONTRACT_ADDRESS, web3j, transactionManager,contractGasProvider);
+
+            String contractAddress = contract.getContractAddress();
+            logger.info("calling contract ....");
+            res = contract.getFactorial(token).send();
+
+            logger.info(res.toString());
+        } catch (Exception e) {
+            logger.info("Exception message : "+e.getMessage() );
+            e.printStackTrace();
+        }
+        return res;
+    }
 
 }
